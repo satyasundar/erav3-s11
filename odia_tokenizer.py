@@ -23,11 +23,17 @@ class OdiaBPETokenizer:
     def _initialize_base_vocab(self):
         """Initialize vocabulary with basic Odia characters"""
         # Vowels
-        self.base_vocab.update([chr(c) for c in range(0x0B05, 0x0B14)])
+        self.base_vocab.update([chr(c) for c in [0x0B05, 0x0B06, 0x0B07, 0x0B08, 0x0B09, 0x0B0A, 0x0B0B, 0x0B0C, 0x0B0F, 0x0B10, 0x0B13, 0x0B14] ])
         # Consonants
-        self.base_vocab.update([chr(c) for c in range(0x0B15, 0x0B39)])
+        self.base_vocab.update([chr(c) for c in [0x0B15, 0x0B16, 0x0B17, 0x0B18, 0x0B19, 0x0B1A, 0x0B1B, 0x0B1C, 0x0B1D, 0x0B1E, 0x0B1F, 0x0B20, 0x0B21, 0x0B22, 0x0B23, 0x0B24, 0x0B25, 0x0B26, 0x0B27, 0x0B28, 0x0B2A, 0x0B2B, 0x0B2C, 0x0B2D, 0x0B2E, 0x0B2F, 0x0B30, 0x0B32, 0x0B33, 0x0B35, 0x0B36, 0x0B37, 0x0B38, 0x0B39, 0x0B3C] ])
         # Vowel marks
-        self.base_vocab.update([chr(c) for c in range(0x0B3E, 0x0B4C)])
+        self.base_vocab.update([chr(c) for c in [0x0B3E, 0x0B3F, 0x0B40, 0x0B41, 0x0B42, 0x0B43, 0x0B44, 0x0B47, 0x0B48, 0x0B4B, 0x0B4C, 0x0B4D, 0x0B55, 0x0B56, 0x0B57] ])
+        # Other etc chars
+        self.base_vocab.update([chr(c) for c in [0x0B5C, 0x0B5D, 0x0B5F, 0x0B60, 0x0B61, 0x0B62, 0x0B63, 0x0B71] ])
+        # numbers
+        self.base_vocab.update([chr(c) for c in [0x0B66, 0x0B67, 0x0B68, 0x0B69, 0x0B6A, 0x0B6B, 0x0B6C, 0x0B6D, 0x0B6E, 0x0B6F] ])
+        # Signs
+        self.base_vocab.update([chr(c) for c in [0x0B70, 0x0B01, 0x0B02, 0x0B03, 0x0964] ])
         # Other marks
         self.base_vocab.update([
             'ଂ', 'ଃ', 'ଁ', '୍',  # Anusvara, Visarga, Candrabindu, Halanta
@@ -63,19 +69,25 @@ class OdiaBPETokenizer:
 
     def train(self, texts: List[str], min_freq: int = 2) -> None:
         """Train BPE model on texts"""
+        
+        # Regular expression for extracting Odia words
+        odia_word_pattern = re.compile(r""" ?[\u0B00-\u0B7F]+| ?[^\s]+|\s+(?!\S)|\s+""")
+
         # Split texts into characters
         words = []
         for text in texts:
-            chars = list(text)
-            # Filter valid Odia characters
-            valid_chars = [c for c in chars if c in self.base_vocab or c.isspace()]
-            if valid_chars:
-                words.append(valid_chars)
-
+            # Extract words based on the Odia pattern
+            extracted_words = odia_word_pattern.findall(text)
+            for word in extracted_words:
+                chars = list(word)
+                # Filter valid Odia characters
+                valid_chars = [c for c in chars if c in self.base_vocab or c.isspace()]
+                if valid_chars:
+                    words.append(valid_chars)
+            
         vocab = self.base_vocab.copy()
         num_merges = self.vocab_size - len(self.special_tokens) - len(vocab)
         print("num_merges : ", num_merges)
-        print("total char length: ", len(words))
         # Perform BPE merges
         for i in range(num_merges):
             pairs = self._get_stats(words)
@@ -90,7 +102,8 @@ class OdiaBPETokenizer:
             pair = best_pair[0]
             new_token = ''.join(pair)
             vocab.add(new_token)
-            print("merging ..", pair)
+            #print("merging ..", pair)
+            print(len(vocab))
             # Record the merge operation
             self.merges[pair] = new_token
             
@@ -108,7 +121,12 @@ class OdiaBPETokenizer:
 
     def encode(self, text: str) -> List[int]:
         """Encode text using learned BPE merges"""
-        words = [list(text)]
+
+        odia_word_pattern = re.compile(r""" ?[\u0B00-\u0B7F]+| ?[^\s]+|\s+(?!\S)|\s+""")
+        extracted_words = odia_word_pattern.findall(text)
+
+        words = [list(word) for word in extracted_words]
+        #words = [list(text)]
         
         # Apply merges in order
         for pair, merged in self.merges.items():

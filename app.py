@@ -60,9 +60,13 @@ def tokenize_text(text):
         token_list.append(f"{token} ({token_id})")
     
     highlighted_text = "".join(html_parts)
+
+    # Calculate compression ratio
+    compression_ratio = len(text) / len(token_ids) if len(token_ids) > 0 else 0
     
     return (
         len(token_ids),  # Token count
+        compression_ratio,  # Compression ratio
         highlighted_text,  # Highlighted text
         "\n".join(token_list)  # Token list
     )
@@ -91,13 +95,14 @@ with gr.Blocks(css=custom_css) as demo:
         
         with gr.Column(scale=1):
             token_count = gr.Number(label="Token Count")
+            compression_ratio = gr.Number(label="Compression Ratio")
             highlighted_output = gr.HTML(label="Tokenized Text")
             token_list = gr.Textbox(label="Token List", lines=10)
     
     input_text.change(
         fn=tokenize_text,
         inputs=[input_text],
-        outputs=[token_count, highlighted_output, token_list]
+        outputs=[token_count, compression_ratio, highlighted_output, token_list]
     )
 
 demo.launch() 
